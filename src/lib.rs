@@ -15,6 +15,10 @@ use tokio_util::io::StreamReader;
 
 pub type Client = hyper::Client<HttpsConnector<HttpConnector>>;
 
+/*
+ * Try to match it to be equal with real chrome build.
+ * https://tools.scrapfly.io/api/fp/ja3?extended=1
+ */
 pub fn create_client() -> Client {
     // borrowed ;)
     // https://github.com/cloudflare/boring/blob/3059ba6e102599f8ae0a962223ca1e216bb61902/hyper-boring/src/test.rs#L63
