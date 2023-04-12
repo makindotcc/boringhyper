@@ -15,6 +15,32 @@ easier to maintain (basically no maintenance related to reqwest updates) and it 
 - https://scrapfly.io/web-scraping-tools/ja3-fingerprint - easily compare ja3 fingerprint without struggling with
 wireshark
 
+## Usage
+```rust
+use boringhyper::ChromeHeadersExt;
+use hyper::{Body, Request};
+
+async fn visit_cf() {
+    const ENTERPRISE_CF_URL: &str = "https://www.canva.com/pl_pl/";
+
+    let client = boringhyper::create_client();
+    let req = Request::builder()
+        .uri(ENTERPRISE_CF_URL)
+        .with_chrome_headers()
+        .body(Body::empty())
+        .unwrap();
+    let mut resp = client.request(req).await.expect("Could not do request");
+    assert_eq!(resp.status(), 200);
+    // Since WAF requires header "accept-encoding: gzip(, deflate, br)" to be sent,
+    // `boringhyper` contains extension on hyper::Response to read body decompressed if 
+    // server replied with compressed content.
+    // See: `ReadBodyExt::read_body`.
+    let body = resp.read_body().await.expect("Could not read body");
+    let body_str = String::from_utf8_lossy(&body);
+    println!("Response body: {body_str}");
+}
+```
+
 ![true image also known as meme representing Virgin API Consumer struggling with 
 rate limits, stale data, quota, api keys and chad third-party scraper that
 parses HTML using regex, scrapes so fast the backend crashes, can access any data he wants](trueshit.png)
