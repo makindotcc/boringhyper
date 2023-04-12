@@ -1,0 +1,16 @@
+[package]
+name = "boringhyper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.21.0", default-features = false, features = ["io-util", "rt", "macros"] }
+tokio-util = { version = "0.7.7", default-features = false, features = ["io"] }
+async-compression = { version = "0.3.15", features = ["tokio", "gzip"] }
+boring = "2.1.0"
+hyper-boring = "2.1.2"
+hyper = { version = "0.14.25", features = ["client", "http1", "http2", "stream"] }
+async-trait = "0.1.68"
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.85"
+futures = "0.3.28"
