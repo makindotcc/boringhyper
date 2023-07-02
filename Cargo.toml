@@ -7,8 +7,8 @@ edition = "2021"
 tokio = { version = "1", default-features = false, features = ["io-util", "rt", "macros"] }
 tokio-util = { version = "0.7", default-features = false, features = ["io"] }
 async-compression = { version = "0.3", features = ["tokio", "gzip"] }
-boring = "2"
-hyper-boring = "2"
+boring = { git = "https://github.com/makindotcc/boring", branch = "update-bindgen" }
+hyper-boring = { git = "https://github.com/makindotcc/boring", branch = "update-bindgen" }
 hyper = { version = "0.14", features = ["client", "http1", "http2", "stream"] }
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
