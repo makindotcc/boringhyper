@@ -82,17 +82,13 @@ impl ChromeHeadersExt for request::Builder {
             .header("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
             .header("accept-encoding", "gzip") // chrome sends "gzip, deflate, br", but it works too? todo
             .header("accept-language", "pl")
-            .header("cache-control", "no-cache")
-            .header("pragma", "no-cache")
-            .header("sec-ch-ua", r#""Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111""#)
-            .header("sec-ch-ua-mobile", "?0")
-            .header("sec-ch-ua-platform", r#""macOS"#)
+            .header("cache-control", "max-age=0")
             .header("sec-fetch-dest", "document")
             .header("sec-fetch-mode", "navigate")
             .header("sec-fetch-site", "none")
             .header("sec-fetch-user", "?1")
             .header("upgrade-insecure-requests", "1")
-            .header("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36")
+            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
     }
 }
 
@@ -117,28 +113,30 @@ pub trait ReadBodyExt {
 #[async_trait]
 impl ReadBodyExt for Response<Body> {
     async fn read_body(&mut self) -> Result<Vec<u8>> {
-        if self
-            .headers()
-            .get("content-encoding")
-            .filter(|val| val.to_str().unwrap_or("") == "gzip")
-            .is_some()
-        {
-            let stream_reader = StreamReader::new(
-                self.body_mut()
-                    .map_err(|err| std::io::Error::new(ErrorKind::Other, err)),
-            );
-            let mut decoder = GzipDecoder::new(stream_reader);
-            let mut buf = Vec::new();
-            decoder
-                .read_to_end(&mut buf)
-                .await
-                .map_err(Error::ReadToEnd)?;
-            Ok(buf)
-        } else {
-            Ok(hyper::body::to_bytes(self.body_mut())
+        match self.headers().get("content-encoding") {
+            None => Ok(hyper::body::to_bytes(self.body_mut())
                 .await
                 .map_err(Error::ReadUncompressed)?
-                .to_vec())
+                .to_vec()),
+            Some(val) => match val.to_str() {
+                Ok("gzip") => {
+                    let stream_reader = StreamReader::new(
+                        self.body_mut()
+                            .map_err(|err| std::io::Error::new(ErrorKind::Other, err)),
+                    );
+                    let mut decoder = GzipDecoder::new(stream_reader);
+                    let mut buf = Vec::new();
+                    decoder
+                        .read_to_end(&mut buf)
+                        .await
+                        .map_err(Error::ReadToEnd)?;
+                    Ok(buf)
+                }
+                Ok(unsupported_encoding) => Err(Error::UnsupportedEncoding {
+                    encoding: unsupported_encoding.to_string(),
+                }),
+                Err(err) => Err(Error::InvalidEncodingHeader(err)),
+            },
         }
     }
 
@@ -155,14 +153,18 @@ pub enum Error {
     ReadToEnd(std::io::Error),
     ReadUncompressed(hyper::Error),
     Deserialize(serde_json::Error),
+    UnsupportedEncoding { encoding: String },
+    InvalidEncodingHeader(hyper::header::ToStrError),
 }
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::ReadToEnd(_) => None,
-            Error::ReadUncompressed(_) => None,
-            Error::Deserialize(_) => None,
+            Error::ReadToEnd(err) => Some(err),
+            Error::ReadUncompressed(err) => Some(err),
+            Error::Deserialize(err) => Some(err),
+            Error::UnsupportedEncoding { .. } => None,
+            Error::InvalidEncodingHeader(err) => Some(err),
         }
     }
 }
@@ -173,6 +175,12 @@ impl Display for Error {
             Error::ReadToEnd(source) => write!(f, "Read to end: {}", source),
             Error::ReadUncompressed(source) => write!(f, "Read uncompressed: {}", source),
             Error::Deserialize(source) => write!(f, "Deserialize: {}", source),
+            Error::UnsupportedEncoding { encoding } => {
+                write!(f, "Unsupported content encoding: {}", encoding)
+            }
+            Error::InvalidEncodingHeader(err) => {
+                write!(f, "Invalid content encoding header: {}", err)
+            }
         }
     }
 }
