@@ -6,6 +6,9 @@ Symptoms of website using JA3 fingerprint that this repo can help solve:
 - returns 403 and requires you to pass js/captcha challenge when requested programmatically even with same headers as browser
 - page when visited first time from modern browser loads instantly without "Checking your browser" WAF.
 
+# Looking for undetected browser automation to pass JavaScript challenge?
+Try [FlarelessHeadlessBrowser](https://github.com/makindotcc/FlarelessHeadlessChrome).
+
 ## Credits and resources
 - https://github.com/4JX/reqwest-impersonate - it is fork of reqwest, hyper and h2 which requires to be updated to 
 upstream. Currently, in my case I can't even manage it to work due to different versions of hyper in project and,
